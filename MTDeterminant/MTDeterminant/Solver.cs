@@ -19,15 +19,15 @@ namespace MTDeterminant
             var result = Matrix<T>.DeterminantSingleThread((Matrix<T>)r);
         }
 
-        public Solution Solve(Matrix<T> matrix)
-        {
-            lock (queue)
-            {
-                if (currentThreadCount < maxThreadCount)
-                {
-                    ThreadPool.QueueUserWorkItem(r => , matrix);
-                }
-            }
-        }
+        //public Solution Solve(Matrix<T> matrix)
+        //{
+        //    lock (queue)
+        //    {
+        //        if (currentThreadCount < maxThreadCount)
+        //        {
+        //            ThreadPool.QueueUserWorkItem(r => , matrix);
+        //        }
+        //    }
+        //}
     }
 }
