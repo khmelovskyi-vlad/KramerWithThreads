@@ -44,7 +44,7 @@ namespace MTDeterminant
             }
             else
             {
-                return DeterminantMultiThread();
+                return DeterminantMultiThread(this);
             }
         }
 
@@ -65,9 +65,22 @@ namespace MTDeterminant
             return result;
         }
 
-        private T DeterminantMultiThread()
+        public static T DeterminantMultiThread(Matrix<T> matrix)
         {
-            throw new NotImplementedException();
+            Task
+            if (matrix.N == 1 && matrix.M == 1)
+            {
+                return matrix[0, 0];
+            }
+            T result = default(T);
+            for (int i = 0; i < matrix.M; i++)
+            {
+                var submatrix = matrix.CreateSubmentrix(i, 0);
+                var innerDet = DeterminantSingleThread(submatrix);
+                var current = matrix.SignMul(innerDet, matrix[i, 0], (int)Math.Pow(-1, i));
+                result = matrix.Sum(current, result);
+            }
+            return result;
         }
     }
 }
