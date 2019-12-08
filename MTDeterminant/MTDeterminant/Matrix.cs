@@ -65,20 +65,23 @@ namespace MTDeterminant
             return result;
         }
 
-        public static Task<T> DeterminantMultiThread(Matrix<T> matrix)
+        public async static Task<T> DeterminantMultiThread(Matrix<T> matrix)
         {
             if (matrix.N == 1 && matrix.M == 1)
             {
-                return Task.FromResult(matrix[0,0]);
+                return matrix[0, 0];
             }
             T result = default(T);
-            Task<T> GetSumItem(int i)
+            async Task<T> GetSumItem(int i)
             {
                 var submatrix = matrix.CreateSubmentrix(i, 0);
-                return DeterminantMultiThread(submatrix).ContinueWith(task => matrix.SignMul(task.Result, matrix[i, 0], (int)Math.Pow(-1, i)));
+                var innerDet = await DeterminantMultiThread(submatrix);
+                var current = matrix.SignMul(innerDet, matrix[i, 0], (int)Math.Pow(-1, i));
+                return current;
             }
-            var tasks = Enumerable.Range(0, matrix.M).Select(i => GetSumItem(i)).ToArray();
-            return Task.WhenAll(tasks).ContinueWith(task => task.Result.Aggregate(result, (acc, item) => matrix.Sum(item, acc)));           
+            return (await Task.WhenAll(Enumerable.Range(0, matrix.M).Select(GetSumItem)))
+                .Aggregate(result, (acc, item) => matrix.Sum(item, acc));
+
         }
     }
 }
