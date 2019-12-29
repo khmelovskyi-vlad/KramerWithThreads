@@ -8,25 +8,26 @@ namespace MTDeterminant
 {
     public class SubMatrix<T> : Matrix<T>
     {
-        public SubMatrix(T[,] array, Func<T, T, T> sum, Func<T, T, int, T> signMul, int m, int n) : base(array, sum, signMul)
+        public SubMatrix(T[,] array, Func<T, T, T> sum, Func<T, T, int, T> signMul, int m, int n, List<int> mSlices, List<int> nSlices) : base(array, sum, signMul)
         {
-            Array = CreateSubArray(array, m, n);
+            (M, N) = AddElements(m, n, mSlices, nSlices);
         }
 
-        private static T[,] CreateSubArray(T[,] array, int m, int n)
+        private static (List<int>, List<int>) AddElements(int m, int n, List<int> mSlices, List<int> nSlices)
         {
-            T[,] subarray = new T[array.GetLength(0) - 1, array.GetLength(1) - 1];
-            for (int i = 0; i < array.GetLength(0); i++)
+            return (AddElement(m, mSlices), AddElement(n, nSlices));
+        }
+        private static List<int> AddElement(int coordinate, List<int> coordinateSlices)
+        {
+            foreach (var slice in coordinateSlices.OrderBy(x=>x))
             {
-                for (int j = 0; j < array.GetLength(1); j++)
+                if (coordinate >= slice)
                 {
-                    if (i != m && j != n)
-                    {
-                        subarray[i < m ? i : i - 1, j < n ? j : j - 1] = array[i, j];
-                    }
+                    coordinate++;
                 }
             }
-            return subarray;
+            coordinateSlices.Add(coordinate);
+            return coordinateSlices;
         }
 
         #region homework

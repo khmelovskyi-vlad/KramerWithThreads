@@ -13,8 +13,8 @@ namespace MTDeterminant
         protected Func<T, T, T> Sum;
         protected Func<T, T, int, T> SignMul;
 
-        public virtual int M => Array.GetLength(0);
-        public virtual int N => Array.GetLength(1);
+        protected List<int> M = new List<int>();
+        protected List<int> N = new List<int>();
 
         public Matrix(T[,] array, Func<T, T, T> sum, Func<T, T, int, T> signMul)
         {
@@ -33,7 +33,7 @@ namespace MTDeterminant
 
         public virtual Matrix<T> CreateSubmentrix(int m, int n)
         {
-            return new SubMatrix<T>(Array, Sum, SignMul, m, n);
+            return new SubMatrix<T>(Array, Sum, SignMul, m, n, M, N);
         }
 
         public T Determinant(bool singleThread)
@@ -50,35 +50,83 @@ namespace MTDeterminant
 
         public static T DeterminantSingleThread(Matrix<T> matrix)
         {
-            if (matrix.N == 1 && matrix.M == 1)
+            var s = matrix.Array.GetLength(0) - matrix.M.Count;
+            if (matrix.Array.GetLength(0) - matrix.N.Count == 1 && matrix.Array.GetLength(1) - matrix.M.Count == 1)
             {
-                return matrix[0, 0];
+                return FindElement(matrix);
             }
             T result = default(T);
-            for (int i = 0; i < matrix.M; i++)
+            for (int i = 0; i < s; i++)
             {
                 var submatrix = matrix.CreateSubmentrix(i, 0);
                 var innerDet = DeterminantSingleThread(submatrix);
-                var current = matrix.SignMul(innerDet, matrix[i, 0], (int)Math.Pow(-1, i));
+                var(m, n) = matrix.DeleterIndex(submatrix);
+                var current = matrix.SignMul(innerDet, matrix[m, n], (int)Math.Pow(-1, i));
                 result = matrix.Sum(current, result);
             }
             return result;
         }
-
         public static Task<T> DeterminantMultiThread(Matrix<T> matrix)
         {
-            if (matrix.N == 1 && matrix.M == 1)
+            var s = matrix.Array.GetLength(0) - matrix.M.Count;
+            if (matrix.Array.GetLength(0) - matrix.N.Count == 1 && matrix.Array.GetLength(1) - matrix.M.Count == 1)
             {
-                return Task.FromResult(matrix[0,0]);
+                return Task.FromResult(matrix[0, 0]);
             }
             T result = default(T);
             Task<T> GetSumItem(int i)
             {
                 var submatrix = matrix.CreateSubmentrix(i, 0);
-                return DeterminantMultiThread(submatrix).ContinueWith(task => matrix.SignMul(task.Result, matrix[i, 0], (int)Math.Pow(-1, i)));
+                var innerDet = DeterminantMultiThread(submatrix);
+                var mAndn = innerDet.ContinueWith(task => matrix.DeleterIndex(submatrix));
+                return mAndn.ContinueWith(task => matrix.SignMul(innerDet.Result, matrix[task.Result.m, task.Result.n], (int)Math.Pow(-1, i)));
             }
-            var tasks = Enumerable.Range(0, matrix.M).Select(i => GetSumItem(i)).ToArray();
-            return Task.WhenAll(tasks).ContinueWith(task => task.Result.Aggregate(result, (acc, item) => matrix.Sum(item, acc)));           
+            var tasks = Enumerable.Range(0, s).Select(i => GetSumItem(i)).ToArray();
+            return Task.WhenAll(tasks).ContinueWith(task => task.Result.Aggregate(result, (acc, item) => matrix.Sum(item, acc)));
+        }
+        private (int m, int n) DeleterIndex(Matrix<T> matrix)
+        {
+            var m = matrix.M[matrix.M.Count - 1];
+            var n = matrix.N[matrix.N.Count - 1];
+            matrix.M.RemoveAt(matrix.M.Count - 1);
+            matrix.N.RemoveAt(matrix.N.Count - 1);
+            return (m, n);
+        }
+        private (int m, int n, T) DeleterIndexTask(Matrix<T> matrix, T innerDet)
+        {
+            var m = matrix.M[matrix.M.Count - 1];
+            var n = matrix.N[matrix.N.Count - 1];
+            matrix.M.RemoveAt(matrix.M.Count - 1);
+            matrix.N.RemoveAt(matrix.N.Count - 1);
+            return (m, n, innerDet);
+        }
+
+        private static T FindElement(Matrix<T> matrix)
+        {
+            return matrix.Array[FindCoordinate(matrix.M, matrix.Array.GetLength(0)), FindCoordinate(matrix.N, matrix.Array.GetLength(1))];
+        }
+        private static int FindCoordinate(List<int> coordinateSlices, int range)
+        {
+            int coordinate = 0;
+            var findCoordinate = true;
+            for (int i = 0; i < range; i++)
+            {
+                foreach (var slices in coordinateSlices)
+                {
+                    if (i == slices)
+                    {
+                        findCoordinate = false;
+                        continue;
+                    }
+                }
+                if (findCoordinate)
+                {
+                    coordinate = i;
+                    return coordinate;
+                }
+                findCoordinate = true;
+            }
+            return coordinate;
         }
     }
 }
