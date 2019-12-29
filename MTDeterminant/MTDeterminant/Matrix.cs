@@ -66,44 +66,44 @@ namespace MTDeterminant
             }
             return result;
         }
-        //public static Task<T> DeterminantMultiThread(Matrix<T> matrix)
-        //{
-        //    var s = matrix.Array.GetLength(0) - matrix.M.Count;
-        //    if (matrix.Array.GetLength(0) - matrix.N.Count == 1 && matrix.Array.GetLength(1) - matrix.M.Count == 1)
-        //    {
-        //        return Task.FromResult(FindElement(matrix));
-        //    }
-        //    T result = default(T);
-        //    Task<T> GetSumItem(int i)
-        //    {
-        //        var submatrix = matrix.CreateSubmentrix(i, 0);
-        //        var innerDet = DeterminantMultiThread(submatrix);
-        //        var (m, n) = matrix.DeleterIndex(submatrix);
-        //        return innerDet.ContinueWith(task => matrix.SignMul(innerDet.Result, matrix[m, n], (int)Math.Pow(-1, i)));
-        //    }
-        //    var tasks = Enumerable.Range(0, s).Select(i => GetSumItem(i)).ToArray();
-        //    return Task.WhenAll(tasks).ContinueWith(task => task.Result.Aggregate(result, (acc, item) => matrix.Sum(item, acc)));
-        //}
-
-        public async static Task<T> DeterminantMultiThread(Matrix<T> matrix)
+        public static Task<T> DeterminantMultiThread(Matrix<T> matrix)
         {
+            var s = matrix.Array.GetLength(0) - matrix.M.Count;
             if (matrix.Array.GetLength(0) - matrix.N.Count == 1 && matrix.Array.GetLength(1) - matrix.M.Count == 1)
             {
-                return FindElement(matrix);
+                return Task.FromResult(FindElement(matrix));
             }
             T result = default(T);
-            async Task<T> GetSumItem(int i)
+            Task<T> GetSumItem(int i)
             {
                 var submatrix = matrix.CreateSubmentrix(i, 0);
-                var innerDet = await DeterminantMultiThread(submatrix);
+                var innerDet = DeterminantMultiThread(submatrix);
                 var (m, n) = matrix.DeleterIndex(submatrix);
-                var current = matrix.SignMul(innerDet, matrix[m, n], (int)Math.Pow(-1, i));
-                return current;
+                return innerDet.ContinueWith(task => matrix.SignMul(task.Result, matrix[m, n], (int)Math.Pow(-1, i)));
             }
-            return (await Task.WhenAll(Enumerable.Range(0, matrix.Array.GetLength(0) - matrix.M.Count).Select(GetSumItem)))
-                .Aggregate(result, (acc, item) => matrix.Sum(item, acc));
-
+            var tasks = Enumerable.Range(0, s).Select(i => GetSumItem(i)).ToArray();
+            return Task.WhenAll(tasks).ContinueWith(task => task.Result.Aggregate(result, (acc, item) => matrix.Sum(item, acc)));
         }
+
+        //public async static Task<T> DeterminantMultiThread(Matrix<T> matrix)
+        //{
+        //    if (matrix.Array.GetLength(0) - matrix.N.Count == 1 && matrix.Array.GetLength(1) - matrix.M.Count == 1)
+        //    {
+        //        return FindElement(matrix);
+        //    }
+        //    T result = default(T);
+        //    async Task<T> GetSumItem(int i)
+        //    {
+        //        var submatrix = matrix.CreateSubmentrix(i, 0);
+        //        var innerDet = await DeterminantMultiThread(submatrix);
+        //        var (m, n) = matrix.DeleterIndex(submatrix);
+        //        var current = matrix.SignMul(innerDet, matrix[m, n], (int)Math.Pow(-1, i));
+        //        return current;
+        //    }
+        //    return (await Task.WhenAll(Enumerable.Range(0, matrix.Array.GetLength(0) - matrix.M.Count).Select(GetSumItem)))
+        //        .Aggregate(result, (acc, item) => matrix.Sum(item, acc));
+
+        //}
         private (int m, int n) DeleterIndex(Matrix<T> matrix)
         {
             var m = matrix.M[matrix.M.Count - 1];
